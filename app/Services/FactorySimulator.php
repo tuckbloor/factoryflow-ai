@@ -27,6 +27,7 @@ final class FactorySimulator
     {
         return $this->transaction(function (array &$state): array {
             $state = $this->initial();
+
             return $state;
         }, false);
     }
@@ -87,7 +88,9 @@ final class FactorySimulator
                 case 'start_conveyor':
                 case 'stop_conveyor':
                     $belt = &$this->findItem($state['conveyors'], $id);
-                    if ($action === 'start_conveyor') $this->ensureSafe($state);
+                    if ($action === 'start_conveyor') {
+                        $this->ensureSafe($state);
+                    }
                     $belt['running'] = $action === 'start_conveyor';
                     $this->record($state, ($belt['running'] ? 'Started ' : 'Stopped ').$id, 'control');
                     break;
@@ -101,7 +104,9 @@ final class FactorySimulator
                 case 'start_handling':
                 case 'stop_handling':
                     $equipment = &$this->findItem($state['handling_equipment'], $id);
-                    if ($action === 'start_handling') $this->ensureSafe($state);
+                    if ($action === 'start_handling') {
+                        $this->ensureSafe($state);
+                    }
                     $equipment['enabled'] = $action === 'start_handling';
                     $this->record($state, ($equipment['enabled'] ? 'Started ' : 'Stopped ').$id, 'control');
                     break;
@@ -114,15 +119,21 @@ final class FactorySimulator
 
                 case 'drive_forklift':
                     $this->ensureSafe($state);
-                    if ($state['factory_running']) throw new InvalidArgumentException('The forklift is under automatic control. Stop the factory to drive manually.');
+                    if ($state['factory_running']) {
+                        throw new InvalidArgumentException('The forklift is under automatic control. Stop the factory to drive manually.');
+                    }
                     $direction = $id ?? '';
                     if (! in_array($direction, ['left', 'right', 'forward', 'back'], true)) {
                         throw new InvalidArgumentException('Forklift direction must be left, right, forward or back.');
                     }
                     $forklift = &$state['material_flow']['manual_forklift'];
                     $steps = $value === null ? 1 : max(1, min(4, (int) $value));
-                    $dx = match ($direction) { 'left' => -.55 * $steps, 'right' => .55 * $steps, default => 0.0 };
-                    $dz = match ($direction) { 'forward' => -.35 * $steps, 'back' => .35 * $steps, default => 0.0 };
+                    $dx = match ($direction) {
+                        'left' => -.55 * $steps, 'right' => .55 * $steps, default => 0.0
+                    };
+                    $dz = match ($direction) {
+                        'forward' => -.35 * $steps, 'back' => .35 * $steps, default => 0.0
+                    };
                     // A marked forklift aisle, separate from the conveyor and crane travel zone.
                     $forklift['x'] = round(max(-7.3, min(7.3, $forklift['x'] + $dx)), 2);
                     $forklift['z'] = round(max(-7.9, min(-6.5, $forklift['z'] + $dz)), 2);
@@ -132,10 +143,16 @@ final class FactorySimulator
 
                 case 'pickup_pallet':
                     $this->ensureSafe($state);
-                    if ($state['factory_running']) throw new InvalidArgumentException('The forklift is under automatic control.');
+                    if ($state['factory_running']) {
+                        throw new InvalidArgumentException('The forklift is under automatic control.');
+                    }
                     $flow = &$state['material_flow'];
-                    if ($flow['manual_forklift']['cargo']) throw new InvalidArgumentException('Forklift is already carrying a pallet.');
-                    if ($flow['yard_pallets'] < 1) throw new InvalidArgumentException('Raw metal storage is empty.');
+                    if ($flow['manual_forklift']['cargo']) {
+                        throw new InvalidArgumentException('Forklift is already carrying a pallet.');
+                    }
+                    if ($flow['yard_pallets'] < 1) {
+                        throw new InvalidArgumentException('Raw metal storage is empty.');
+                    }
                     if ($flow['manual_forklift']['x'] < 5.7 || abs($flow['manual_forklift']['z'] + 7.1) > .9) {
                         throw new InvalidArgumentException('Drive the manual forklift to RAW METAL (right-hand loading bay).');
                     }
@@ -147,9 +164,13 @@ final class FactorySimulator
 
                 case 'drop_pallet':
                     $this->ensureSafe($state);
-                    if ($state['factory_running']) throw new InvalidArgumentException('The forklift is under automatic control.');
+                    if ($state['factory_running']) {
+                        throw new InvalidArgumentException('The forklift is under automatic control.');
+                    }
                     $flow = &$state['material_flow'];
-                    if (! $flow['manual_forklift']['cargo']) throw new InvalidArgumentException('Forklift has no pallet.');
+                    if (! $flow['manual_forklift']['cargo']) {
+                        throw new InvalidArgumentException('Forklift has no pallet.');
+                    }
                     if ($flow['manual_forklift']['x'] > -2.3 || abs($flow['manual_forklift']['z'] + 7.1) > .9) {
                         throw new InvalidArgumentException('Drive the manual forklift to the AUTO FORKLIFT DROP ZONE (left bay).');
                     }
@@ -189,7 +210,9 @@ final class FactorySimulator
                     $state['factory_running'] = true;
                     // Start always resumes an existing order, or creates a fresh run after completion.
                     foreach ($state['jobs'] as &$job) {
-                        if ($job['status'] === 'paused') $job['status'] = 'running';
+                        if ($job['status'] === 'paused') {
+                            $job['status'] = 'running';
+                        }
                     }
                     unset($job);
                     $hasPending = count(array_filter($state['jobs'], fn ($j) => in_array($j['status'], ['queued', 'running'], true))) > 0;
@@ -235,6 +258,7 @@ final class FactorySimulator
                 default:
                     throw new InvalidArgumentException('Unknown factory action: '.$action);
             }
+
             return $state;
         });
     }
@@ -243,35 +267,48 @@ final class FactorySimulator
     {
         foreach ($state['conveyors'] as &$belt) {
             $belt['running'] = true;
-            if ($belt['speed'] === 0) $belt['speed'] = 75;
+            if ($belt['speed'] === 0) {
+                $belt['speed'] = 75;
+            }
         }
         unset($belt);
         foreach ($state['handling_equipment'] as &$equipment) {
             $equipment['enabled'] = true;
-            if ($equipment['speed'] === 0) $equipment['speed'] = 75;
+            if ($equipment['speed'] === 0) {
+                $equipment['speed'] = 75;
+            }
         }
         unset($equipment);
     }
 
     private function stopEquipment(array &$state): void
     {
-        foreach ($state['conveyors'] as &$belt) $belt['running'] = false;
+        foreach ($state['conveyors'] as &$belt) {
+            $belt['running'] = false;
+        }
         unset($belt);
-        foreach ($state['handling_equipment'] as &$equipment) $equipment['enabled'] = false;
+        foreach ($state['handling_equipment'] as &$equipment) {
+            $equipment['enabled'] = false;
+        }
         unset($equipment);
     }
 
     private function scheduleJob(array &$state, bool $allowNewCycle = false): void
     {
-        if (! $state['factory_running'] || $state['emergency_stop']) return;
+        if (! $state['factory_running'] || $state['emergency_stop']) {
+            return;
+        }
         foreach ($state['jobs'] as $job) {
-            if ($job['status'] === 'running') return;
+            if ($job['status'] === 'running') {
+                return;
+            }
         }
         foreach ($state['jobs'] as &$job) {
             if ($job['status'] === 'queued') {
                 $job['status'] = 'running';
                 $this->record($state, 'Automatically started '.$job['id'].' — '.$job['product'], 'job');
                 unset($job);
+
                 return;
             }
         }
@@ -280,6 +317,7 @@ final class FactorySimulator
             $state['factory_running'] = false;
             $this->stopEquipment($state);
             $this->record($state, 'All production orders finished. Factory waiting for Start.', 'job');
+
             return;
         }
         // A complete run has finished. Requeue a fresh cycle without losing total units or run history.
@@ -306,7 +344,9 @@ final class FactorySimulator
 
     private function ensureSafe(array $state): void
     {
-        if ($state['emergency_stop']) throw new InvalidArgumentException('Release emergency stop first.');
+        if ($state['emergency_stop']) {
+            throw new InvalidArgumentException('Release emergency stop first.');
+        }
     }
 
     private function speed(mixed $value): int
@@ -314,6 +354,7 @@ final class FactorySimulator
         if (! is_numeric($value) || (float) $value < 0 || (float) $value > 100) {
             throw new InvalidArgumentException('Speed must be between 0 and 100.');
         }
+
         return (int) round((float) $value);
     }
 
@@ -325,17 +366,26 @@ final class FactorySimulator
         }
         $path = $directory.'/state.json';
         $handle = fopen($directory.'/state.lock', 'c+');
-        if ($handle === false) throw new RuntimeException('Cannot open factory state lock.');
+        if ($handle === false) {
+            throw new RuntimeException('Cannot open factory state lock.');
+        }
         try {
-            if (! flock($handle, LOCK_EX)) throw new RuntimeException('Cannot lock factory state.');
+            if (! flock($handle, LOCK_EX)) {
+                throw new RuntimeException('Cannot lock factory state.');
+            }
             $state = is_file($path) ? json_decode((string) file_get_contents($path), true) : null;
-            if (! is_array($state)) $state = $this->initial();
+            if (! is_array($state)) {
+                $state = $this->initial();
+            }
             $this->upgrade($state);
-            if ($advance) $this->advance($state);
+            if ($advance) {
+                $this->advance($state);
+            }
             $result = $operation($state);
             if (file_put_contents($path, json_encode($state, JSON_PRETTY_PRINT | JSON_THROW_ON_ERROR)) === false) {
                 throw new RuntimeException('Cannot persist factory state.');
             }
+
             return $this->present($result);
         } finally {
             flock($handle, LOCK_UN);
@@ -362,18 +412,26 @@ final class FactorySimulator
             }
         }
         $state['material_flow'] ??= $initial['material_flow'];
-        foreach ($initial['material_flow'] as $key => $value) $state['material_flow'][$key] ??= $value;
+        foreach ($initial['material_flow'] as $key => $value) {
+            $state['material_flow'][$key] ??= $value;
+        }
         $state['material_flow']['auto_forklift'] = array_merge($initial['material_flow']['auto_forklift'], $state['material_flow']['auto_forklift'] ?? []);
         $state['material_flow']['manual_forklift'] = array_merge($initial['material_flow']['manual_forklift'], $state['material_flow']['manual_forklift'] ?? []);
-        if ($state['factory_running'] && $state['emergency_stop']) $state['factory_running'] = false;
+        if ($state['factory_running'] && $state['emergency_stop']) {
+            $state['factory_running'] = false;
+        }
         $state['transfer'] ??= $initial['transfer'];
-        foreach ($initial['transfer'] as $key => $value) $state['transfer'][$key] ??= $value;
+        foreach ($initial['transfer'] as $key => $value) {
+            $state['transfer'][$key] ??= $value;
+        }
         $state['material_flow']['dispatched_parts'] ??= 0;
         $state['material_flow']['manual_forklift']['phase'] ??= 'at_yard';
         $state['material_flow']['manual_forklift']['progress'] ??= 0.0;
         $state['work_seconds'] ??= 0.0;
         foreach ($initial['machines'] as $machine) {
-            if (! in_array($machine['id'], array_column($state['machines'], 'id'), true)) $state['machines'][] = $machine;
+            if (! in_array($machine['id'], array_column($state['machines'], 'id'), true)) {
+                $state['machines'][] = $machine;
+            }
         }
         foreach ($state['jobs'] as &$job) {
             $job['runs_completed'] ??= ($job['status'] === 'complete' ? 1 : 0);
@@ -398,8 +456,11 @@ final class FactorySimulator
     private function enabled(array $state, string $id): bool
     {
         foreach ($state['handling_equipment'] as $equipment) {
-            if ($equipment['id'] === $id) return $equipment['enabled'] && $equipment['speed'] > 0;
+            if ($equipment['id'] === $id) {
+                return $equipment['enabled'] && $equipment['speed'] > 0;
+            }
         }
+
         return false;
     }
 
@@ -434,7 +495,10 @@ final class FactorySimulator
         $this->scheduleJob($state, true);
         $jobIndex = null;
         foreach ($state['jobs'] as $i => $job) {
-            if ($job['status'] === 'running') { $jobIndex = $i; break; }
+            if ($job['status'] === 'running') {
+                $jobIndex = $i;
+                break;
+            }
         }
         $moving = $this->lineReady($state) && $jobIndex !== null;
         $flow = &$state['material_flow'];
@@ -448,10 +512,12 @@ final class FactorySimulator
             if ($phase !== 'at_yard' || $canCollect) {
                 $truck['progress'] += $dt * $this->equipmentSpeed($state, 'FL-01') / 100;
                 $durations = ['at_yard' => 0.5, 'to_dock' => 4.0, 'at_dock' => 0.5, 'to_yard' => 4.0];
-                for ($i=0; $i<6; $i++) {
+                for ($i = 0; $i < 6; $i++) {
                     $phase = $truck['phase'];
                     $duration = $durations[$phase];
-                    if ($truck['progress'] < $duration) break;
+                    if ($truck['progress'] < $duration) {
+                        break;
+                    }
                     if ($phase === 'at_yard') {
                         if ($flow['yard_pallets'] <= 0) {
                             $flow['yard_pallets'] += 8;
@@ -474,43 +540,45 @@ final class FactorySimulator
                     $truck['progress'] -= $duration;
                 }
             }
-            $phase=$truck['phase'];
+            $phase = $truck['phase'];
             $truck['x'] = round(match ($phase) {
-                'at_yard' => 6.4, 'to_dock' => 6.4-9.55*min(1,$truck['progress']/4),
-                'at_dock' => -3.15, 'to_yard' => -3.15+9.55*min(1,$truck['progress']/4),
-            },2);
+                'at_yard' => 6.4, 'to_dock' => 6.4 - 9.55 * min(1, $truck['progress'] / 4),
+                'at_dock' => -3.15, 'to_yard' => -3.15 + 9.55 * min(1, $truck['progress'] / 4),
+            }, 2);
             $truck['z'] = -7.1;
-            $truck['heading'] = in_array($phase, ['to_dock','at_dock'],true) ? 'left' : 'right';
+            $truck['heading'] = in_array($phase, ['to_dock', 'at_dock'], true) ? 'left' : 'right';
             unset($truck);
         }
         if ($moving && $this->enabled($state, 'FL-AUTO')) {
             $truck = &$flow['auto_forklift'];
-            $phase=$truck['phase'];
+            $phase = $truck['phase'];
             $canCollect = $flow['dock_pallets'] > 0 && $flow['crane_pallets'] < 2;
             if ($phase !== 'at_dock' || $canCollect) {
-                $truck['progress'] += $dt * $this->equipmentSpeed($state,'FL-AUTO')/100;
-                $durations=['at_dock'=>0.5,'to_crane'=>2.5,'unload'=>0.5,'returning'=>2.5];
-                for($i=0;$i<8;$i++) {
-                    $phase=$truck['phase'];
-                    $duration=$durations[$phase];
-                    if ($truck['progress'] < $duration) break;
+                $truck['progress'] += $dt * $this->equipmentSpeed($state, 'FL-AUTO') / 100;
+                $durations = ['at_dock' => 0.5, 'to_crane' => 2.5, 'unload' => 0.5, 'returning' => 2.5];
+                for ($i = 0; $i < 8; $i++) {
+                    $phase = $truck['phase'];
+                    $duration = $durations[$phase];
+                    if ($truck['progress'] < $duration) {
+                        break;
+                    }
                     if ($phase === 'at_dock') {
                         if ($flow['dock_pallets'] === 0 || $flow['crane_pallets'] >= 2) {
                             $truck['progress'] = 0;
                             break;
                         }
                         $flow['dock_pallets']--;
-                        $truck['cargo']=true;
-                        $truck['phase']='to_crane';
+                        $truck['cargo'] = true;
+                        $truck['phase'] = 'to_crane';
                     } elseif ($phase === 'to_crane') {
-                        $truck['phase']='unload';
+                        $truck['phase'] = 'unload';
                     } elseif ($phase === 'unload') {
                         $flow['crane_pallets']++;
-                        $truck['cargo']=false;
-                        $truck['phase']='returning';
+                        $truck['cargo'] = false;
+                        $truck['phase'] = 'returning';
                         $this->record($state, 'FL-AUTO deposited pallet at gantry pickup', 'material');
                     } else {
-                        $truck['phase']='at_dock';
+                        $truck['phase'] = 'at_dock';
                     }
                     $truck['progress'] -= $duration;
                 }
@@ -529,46 +597,52 @@ final class FactorySimulator
                 if ($flow['open_pallet_blanks'] > 0 && $this->enabled($state, 'CR-01')) {
                     $flow['open_pallet_blanks']--;
                     $work['serial']++;
-                    $work['phase']='gantry_pick';
-                    $work['elapsed']=0.0;
-                    $work['job_id']=$state['jobs'][$jobIndex]['id'];
+                    $work['phase'] = 'gantry_pick';
+                    $work['elapsed'] = 0.0;
+                    $work['job_id'] = $state['jobs'][$jobIndex]['id'];
                     $work['lathe_id'] = $work['serial'] % 2 ? 'LAT-01' : 'LAT-02';
                     $this->record($state, 'Part #'.$work['serial'].' assigned: crane pickup → '.$work['lathe_id'], 'material');
                 }
             } else {
-                $speed = $this->transferSpeed($state,$work['phase']);
+                $speed = $this->transferSpeed($state, $work['phase']);
                 if ($speed > 0) {
                     // Allow a capped time slice; preserve exact part custody when stages change.
-                    $remaining = $dt*$speed;
-                    $order=array_keys(self::TRANSFER_STEPS);
-                    for($i=0;$i<20 && $remaining>0.000001 && $work['phase']!=='waiting_material';$i++) {
-                        $phase=$work['phase'];
-                        $duration=self::TRANSFER_STEPS[$phase];
-                        $advance=min($remaining,max(0.0,$duration-$work['elapsed']));
+                    $remaining = $dt * $speed;
+                    $order = array_keys(self::TRANSFER_STEPS);
+                    for ($i = 0; $i < 20 && $remaining > 0.000001 && $work['phase'] !== 'waiting_material'; $i++) {
+                        $phase = $work['phase'];
+                        $duration = self::TRANSFER_STEPS[$phase];
+                        $advance = min($remaining, max(0.0, $duration - $work['elapsed']));
                         $work['elapsed'] += $advance;
                         $remaining -= $advance;
-                        if ($work['elapsed'] + 0.000001 < $duration) break;
-                        $index=array_search($phase,$order,true);
-                        $work['phase']=$order[$index+1]??'packed';
-                        $work['elapsed']=0.0;
-                        if ($phase==='gantry_place') $flow['blanks_loaded']++;
-                        if ($phase==='cnc_turn') $flow['machined_parts']++;
-                        if ($work['phase']==='packed') {
-                            $job=&$state['jobs'][$jobIndex];
+                        if ($duration > $work['elapsed'] + 0.000001) {
+                            break;
+                        }
+                        $index = array_search($phase, $order, true);
+                        $work['phase'] = $order[$index + 1] ?? 'packed';
+                        $work['elapsed'] = 0.0;
+                        if ($phase === 'gantry_place') {
+                            $flow['blanks_loaded']++;
+                        }
+                        if ($phase === 'cnc_turn') {
+                            $flow['machined_parts']++;
+                        }
+                        if ($work['phase'] === 'packed') {
+                            $job = &$state['jobs'][$jobIndex];
                             $job['produced']++;
                             $state['units_produced']++;
                             $flow['dispatched_parts']++;
                             $this->record($state, 'RB-02 packed part #'.$work['serial'].' for '.$job['id'], 'material');
                             if ($job['produced'] >= $job['quantity']) {
-                                $job['status']='complete';
+                                $job['status'] = 'complete';
                                 $job['runs_completed']++;
-                                $job['completed_at']=Carbon::now()->toIso8601String();
-                                $this->record($state,$job['id'].' completed: '.$job['quantity'].' actual part handoffs', 'job');
+                                $job['completed_at'] = Carbon::now()->toIso8601String();
+                                $this->record($state, $job['id'].' completed: '.$job['quantity'].' actual part handoffs', 'job');
                             }
                             unset($job);
-                            $work['phase']='waiting_material';
-                            $work['elapsed']=0.0;
-                            $work['job_id']=null;
+                            $work['phase'] = 'waiting_material';
+                            $work['elapsed'] = 0.0;
+                            $work['job_id'] = null;
                             break;
                         }
                     }
@@ -576,7 +650,9 @@ final class FactorySimulator
             }
         }
         foreach ($state['machines'] as &$machine) {
-            if ($machine['status'] === 'fault') continue;
+            if ($machine['status'] === 'fault') {
+                continue;
+            }
             $stage = $work['phase'];
             $machine['status'] = $moving && (
                 (($machine['id'] === $work['lathe_id']) && $stage === 'cnc_turn') ||
@@ -586,31 +662,49 @@ final class FactorySimulator
                 ($machine['id'] === 'PKG-01' && $stage === 'pack_cycle') ||
                 ($machine['id'] === 'QC-01' && $stage === 'inspect')
             ) ? 'running' : 'idle';
-            $target=$machine['status']==='running'?58:24;
-            $machine['temperature']=round($machine['temperature']+($target-$machine['temperature'])*min(1,$dt/35),1);
+            $target = $machine['status'] === 'running' ? 58 : 24;
+            $machine['temperature'] = round($machine['temperature'] + ($target - $machine['temperature']) * min(1, $dt / 35), 1);
         }
         unset($machine,$work,$flow);
-        if ($state['factory_running'] && ! $state['emergency_stop']) $this->scheduleJob($state,true);
+        if ($state['factory_running'] && ! $state['emergency_stop']) {
+            $this->scheduleJob($state, true);
+        }
     }
 
-    private function transferSpeed(array $state,string $phase): float
+    private function transferSpeed(array $state, string $phase): float
     {
-        if (str_starts_with($phase,'gantry_')) return $this->enabled($state,'CR-01') ? $this->equipmentSpeed($state,'CR-01')/75 : 0.0;
-        if (str_starts_with($phase,'jib_')) return $this->enabled($state,'CR-02') ? $this->equipmentSpeed($state,'CR-02')/75 : 0.0;
-        if (str_starts_with($phase,'robot1_')) return $this->enabled($state,'RB-01') ? $this->equipmentSpeed($state,'RB-01')/75 : 0.0;
-        if (str_starts_with($phase,'robot2_')) return $this->enabled($state,'RB-02') ? $this->equipmentSpeed($state,'RB-02')/75 : 0.0;
+        if (str_starts_with($phase, 'gantry_')) {
+            return $this->enabled($state, 'CR-01') ? $this->equipmentSpeed($state, 'CR-01') / 75 : 0.0;
+        }
+        if (str_starts_with($phase, 'jib_')) {
+            return $this->enabled($state, 'CR-02') ? $this->equipmentSpeed($state, 'CR-02') / 75 : 0.0;
+        }
+        if (str_starts_with($phase, 'robot1_')) {
+            return $this->enabled($state, 'RB-01') ? $this->equipmentSpeed($state, 'RB-01') / 75 : 0.0;
+        }
+        if (str_starts_with($phase, 'robot2_')) {
+            return $this->enabled($state, 'RB-02') ? $this->equipmentSpeed($state, 'RB-02') / 75 : 0.0;
+        }
         $belt = match ($phase) {
-            'belt1_cut','belt1_drill','cnc_infeed'=>0,
-            'belt2_qc','belt2_finish','belt2_jib'=>1,
-            'belt3'=>2, default=>null
+            'belt1_cut','belt1_drill','cnc_infeed' => 0,
+            'belt2_qc','belt2_finish','belt2_jib' => 1,
+            'belt3' => 2, default => null
         };
-        if ($belt!==null) return $state['conveyors'][$belt]['running'] ? $state['conveyors'][$belt]['speed']/75 : 0.0;
+        if ($belt !== null) {
+            return $state['conveyors'][$belt]['running'] ? $state['conveyors'][$belt]['speed'] / 75 : 0.0;
+        }
+
         return 1.0;
     }
 
     private function equipmentSpeed(array $state, string $id): int
     {
-        foreach ($state['handling_equipment'] as $equipment) if ($equipment['id'] === $id) return (int) $equipment['speed'];
+        foreach ($state['handling_equipment'] as $equipment) {
+            if ($equipment['id'] === $id) {
+                return (int) $equipment['speed'];
+            }
+        }
+
         return 0;
     }
 
@@ -622,12 +716,12 @@ final class FactorySimulator
         foreach ($state['handling_equipment'] as &$equipment) {
             $phase = $state['transfer']['phase'];
             $busy = match ($equipment['id']) {
-                'CR-01' => str_starts_with($phase,'gantry_'),
-                'CR-02' => str_starts_with($phase,'jib_'),
-                'RB-01' => str_starts_with($phase,'robot1_'),
-                'RB-02' => str_starts_with($phase,'robot2_'),
-                'FL-01' => in_array($flow['manual_forklift']['phase'],['to_dock','at_dock','to_yard'],true),
-                'FL-AUTO' => in_array($flow['auto_forklift']['phase'],['to_crane','unload','returning'],true),
+                'CR-01' => str_starts_with($phase, 'gantry_'),
+                'CR-02' => str_starts_with($phase, 'jib_'),
+                'RB-01' => str_starts_with($phase, 'robot1_'),
+                'RB-02' => str_starts_with($phase, 'robot2_'),
+                'FL-01' => in_array($flow['manual_forklift']['phase'], ['to_dock', 'at_dock', 'to_yard'], true),
+                'FL-AUTO' => in_array($flow['auto_forklift']['phase'], ['to_crane', 'unload', 'returning'], true),
                 default => false,
             };
             $equipment['status'] = $equipment['enabled'] && $equipment['speed'] > 0 && $hasJob && $lineReady && $busy
@@ -635,11 +729,14 @@ final class FactorySimulator
         }
         unset($equipment);
         $state['transfer']['duration'] = self::TRANSFER_STEPS[$state['transfer']['phase']] ?? 0.0;
-        $secondsPerPart=0.0;
+        $secondsPerPart = 0.0;
         foreach (self::TRANSFER_STEPS as $phase => $duration) {
-            $speed=$this->transferSpeed($state,$phase);
-            if ($speed<=0.0) { $secondsPerPart=0.0; break; }
-            $secondsPerPart+=$duration/$speed;
+            $speed = $this->transferSpeed($state, $phase);
+            if ($speed <= 0.0) {
+                $secondsPerPart = 0.0;
+                break;
+            }
+            $secondsPerPart += $duration / $speed;
         }
         $state['summary'] = [
             'units' => $state['units_produced'],
@@ -647,17 +744,22 @@ final class FactorySimulator
             'completed_jobs' => count(array_filter($state['jobs'], fn ($j) => $j['status'] === 'complete')),
             'running_machines' => count(array_filter($state['machines'], fn ($m) => $m['status'] === 'running')),
             'faults' => count(array_filter($state['machines'], fn ($m) => $m['status'] === 'fault')),
-            'rate' => $lineReady && $hasJob && $secondsPerPart>0 ? (int) round(3600/$secondsPerPart) : 0,
+            'rate' => $lineReady && $hasJob && $secondsPerPart > 0 ? (int) round(3600 / $secondsPerPart) : 0,
             'raw_pallets' => $flow['yard_pallets'] + $flow['dock_pallets'] + $flow['crane_pallets'] + ($flow['manual_forklift']['cargo'] ? 1 : 0) + ($flow['auto_forklift']['cargo'] ? 1 : 0),
             'factory_running' => $state['factory_running'],
             'cycles' => $state['completed_cycles'],
         ];
+
         return $state;
     }
 
     private function &findItem(array &$items, ?string $id): array
     {
-        foreach ($items as &$item) if ($item['id'] === $id) return $item;
+        foreach ($items as &$item) {
+            if ($item['id'] === $id) {
+                return $item;
+            }
+        }
         throw new InvalidArgumentException('Unknown factory item: '.($id ?? '(none)'));
     }
 
@@ -674,6 +776,7 @@ final class FactorySimulator
             ['LAT-01', 'CNC Turning Centre A'], ['LAT-02', 'CNC Turning Centre B'],
             ['ASM-01', 'Robot Assembly'], ['QC-01', 'Quality Inspection'], ['PKG-01', 'Auto Packing'],
         ];
+
         return [
             'last_tick' => microtime(true),
             'factory_running' => false,
@@ -681,7 +784,7 @@ final class FactorySimulator
             '_sync_v5' => true,
             'completed_cycles' => 0,
             'work_seconds' => 0.0,
-            'transfer' => ['serial'=>0,'phase'=>'waiting_material','elapsed'=>0.0,'job_id'=>null,'lathe_id'=>'LAT-01'],
+            'transfer' => ['serial' => 0, 'phase' => 'waiting_material', 'elapsed' => 0.0, 'job_id' => null, 'lathe_id' => 'LAT-01'],
             'units_produced' => 0,
             'emergency_stop' => false,
             'handling_equipment' => [

@@ -28,6 +28,7 @@ final class RunFactorySimulation extends Command
                 $factory->snapshot();
             } catch (Throwable $exception) {
                 $this->error($exception->getMessage());
+
                 return self::FAILURE;
             }
             usleep($interval * 1000);

@@ -8,4 +8,3 @@ Route::get('/', function () {
 
 // FactoryFlow AI routes
 require __DIR__.'/factory.php';
-
