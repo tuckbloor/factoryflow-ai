@@ -1,0 +1,25 @@
+name: Bug report
+description: Report a reproducible MCP behavior problem
+body:
+  - type: markdown
+    attributes:
+      value: "Do not post secrets or security vulnerabilities. For security issues, see SECURITY.md."
+  - type: input
+    id: versions
+    attributes:
+      label: PHP / Laravel / MCP package versions
+      placeholder: "PHP 8.5, Laravel 13, laravel/mcp 1.1.1"
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      placeholder: "Tool name, safe example input, expected result and actual result"
+    validations:
+      required: true
+  - type: textarea
+    id: logs
+    attributes:
+      label: Sanitized logs or screenshots
+      description: "Redact all tokens, email addresses and private file contents."

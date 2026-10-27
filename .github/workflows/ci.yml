@@ -1,0 +1,44 @@
+name: CI
+on:
+  push:
+  pull_request:
+permissions:
+  contents: read
+jobs:
+  php:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+        php: ['8.4', '8.5']
+    runs-on: ${{ matrix.os }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: ${{ matrix.php }}
+          coverage: none
+          extensions: fileinfo, mbstring, sqlite3, pdo_sqlite
+          tools: composer:v2
+      - name: Verify PHP extensions
+        run: |
+          php -v
+          php --ri fileinfo
+          php --ri mbstring
+          php --ri pdo_sqlite
+      - name: Check Composer manifest
+        run: composer validate --no-check-publish
+      - name: Install dependencies
+        run: composer install --no-interaction --prefer-dist --no-progress
+      - name: Prepare environment
+        shell: bash
+        run: |
+          cp .env.example .env
+          php artisan key:generate
+          mkdir -p storage/app/mcp-files
+      - name: Test
+        run: php artisan test
+      - name: Check formatting
+        run: vendor/bin/pint --test

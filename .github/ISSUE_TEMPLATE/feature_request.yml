@@ -1,0 +1,15 @@
+name: Feature request
+description: Suggest a narrowly scoped improvement
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: What developer problem does this solve?
+    validations:
+      required: true
+  - type: textarea
+    id: design
+    attributes:
+      label: Suggested tool/API design and security considerations
+    validations:
+      required: true
