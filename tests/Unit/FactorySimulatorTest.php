@@ -206,9 +206,9 @@ final class FactorySimulatorTest extends TestCase
     private function tick(): array
     {
         $path = $this->directory.'/state.json';
-        $state = json_decode((string) file_get_contents($path),true);
+        $state = json_decode((string) file_get_contents($path), true);
         $state['last_tick'] = microtime(true) - 0.45;
-        file_put_contents($path,json_encode($state));
+        file_put_contents($path, json_encode($state));
 
         return $this->factory->snapshot();
     }
